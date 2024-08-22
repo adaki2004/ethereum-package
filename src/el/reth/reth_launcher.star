@@ -8,7 +8,6 @@ constants = import_module("../../package_io/constants.star")
 mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launcher.star")
 
 RPC_PORT_NUM = 8545
-L2_RPC_PORT_NUM = 10110
 WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
 ENGINE_RPC_PORT_NUM = 8551
@@ -178,7 +177,6 @@ def get_config(
             constants.RPC_PORT_ID: public_ports_for_component[2],
             constants.WS_PORT_ID: public_ports_for_component[3],
             constants.METRICS_PORT_ID: public_ports_for_component[4],
-            constants.L2_RPC_PORT_ID: L2_RPC_PORT_NUM,
         }
         public_ports.update(
             shared_utils.get_port_specs(additional_public_port_assignments)
@@ -189,7 +187,6 @@ def get_config(
         constants.UDP_DISCOVERY_PORT_ID: discovery_port,
         constants.ENGINE_RPC_PORT_ID: ENGINE_RPC_PORT_NUM,
         constants.RPC_PORT_ID: RPC_PORT_NUM,
-        constants.L2_RPC_PORT_ID: L2_RPC_PORT_NUM,
         constants.WS_PORT_ID: WS_PORT_NUM,
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
