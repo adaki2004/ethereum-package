@@ -285,7 +285,6 @@ def get_port_specs(port_assignments):
         if port_id in [
             constants.TCP_DISCOVERY_PORT_ID,
             constants.RPC_PORT_ID,
-            constants.L2_RPC_PORT_ID,
             constants.ENGINE_RPC_PORT_ID,
             constants.ENGINE_WS_PORT_ID,
             constants.WS_RPC_PORT_ID,
