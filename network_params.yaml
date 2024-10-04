@@ -12,3 +12,4 @@ network_params:
   network_id: '160010'
 additional_services:
   - blockscout
+  - blockscout_l2_1

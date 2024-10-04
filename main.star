@@ -467,6 +467,19 @@ def run(plan, args={}):
                 global_node_selectors,
                 args_with_right_defaults.port_publisher,
                 index,
+                False
+            )
+            plan.print("Successfully launched blockscout")
+        elif additional_service == "blockscout_l2_1":
+            plan.print("Launching blockscout for L2s")
+            blockscout_sc_verif_url = blockscout.launch_blockscout(
+                plan,
+                all_el_contexts,
+                persistent,
+                global_node_selectors,
+                args_with_right_defaults.port_publisher,
+                index,
+                True
             )
             plan.print("Successfully launched blockscout")
         elif additional_service == "dora":
