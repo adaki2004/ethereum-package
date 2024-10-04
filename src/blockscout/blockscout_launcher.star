@@ -2,8 +2,8 @@ shared_utils = import_module("../shared_utils/shared_utils.star")
 constants = import_module("../package_io/constants.star")
 postgres = import_module("github.com/kurtosis-tech/postgres-package/main.star")
 
-IMAGE_NAME_BLOCKSCOUT = "blockscout/blockscout:6.7.2"
-IMAGE_NAME_BLOCKSCOUT_VERIF = "ghcr.io/blockscout/smart-contract-verifier:v1.6.0"
+IMAGE_NAME_BLOCKSCOUT = "blockscout/blockscout:6.8.0"
+IMAGE_NAME_BLOCKSCOUT_VERIF = "ghcr.io/blockscout/smart-contract-verifier:v1.9.0"
 
 SERVICE_NAME_BLOCKSCOUT = "blockscout"
 
@@ -19,6 +19,8 @@ BLOCKSCOUT_VERIF_MIN_CPU = 10
 BLOCKSCOUT_VERIF_MAX_CPU = 1000
 BLOCKSCOUT_VERIF_MIN_MEMORY = 10
 BLOCKSCOUT_VERIF_MAX_MEMORY = 1024
+
+L2_RPC_PORT_NUM = 10110
 
 USED_PORTS = {
     constants.HTTP_PORT_ID: shared_utils.new_port_spec(
@@ -44,28 +46,40 @@ def launch_blockscout(
     global_node_selectors,
     port_publisher,
     additional_service_index,
+    isL2
 ):
+
+    el_context = el_contexts[0]
+
+    el_client_name = el_context.client_name
+
+    real_service_name = SERVICE_NAME_BLOCKSCOUT
+    el_client_rpc_url = "http://{}:{}/".format(
+        el_context.ip_addr, el_context.rpc_port_num
+    )
+    if isL2 == True:
+        el_client_rpc_url = "http://{}:{}/".format(
+            el_context.ip_addr, L2_RPC_PORT_NUM
+        )
+        real_service_name = "{}{}".format(
+            real_service_name, "-layer2"
+        )
+
     postgres_output = postgres.run(
         plan,
-        service_name="{}-postgres".format(SERVICE_NAME_BLOCKSCOUT),
+        service_name="{}-postgres".format(real_service_name),
         database="blockscout",
         extra_configs=["max_connections=1000"],
         persistent=persistent,
         node_selectors=global_node_selectors,
     )
 
-    el_context = el_contexts[0]
-    el_client_rpc_url = "http://{}:{}/".format(
-        el_context.ip_addr, el_context.rpc_port_num
-    )
-    el_client_name = el_context.client_name
-
     config_verif = get_config_verif(
         global_node_selectors,
         port_publisher,
         additional_service_index,
     )
-    verif_service_name = "{}-verif".format(SERVICE_NAME_BLOCKSCOUT)
+    verif_service_name = "{}-verif".format(real_service_name)
     verif_service = plan.add_service(verif_service_name, config_verif)
     verif_url = "http://{}:{}/api".format(
         verif_service.hostname, verif_service.ports["http"].number
@@ -80,7 +94,7 @@ def launch_blockscout(
         port_publisher,
         additional_service_index,
     )
-    blockscout_service = plan.add_service(SERVICE_NAME_BLOCKSCOUT, config_backend)
+    blockscout_service = plan.add_service(real_service_name, config_backend)
     plan.print(blockscout_service)
 
     blockscout_url = "http://{}:{}".format(
