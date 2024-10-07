@@ -81,7 +81,7 @@ def launch_blockscout(
     )
     verif_service_name = "{}-verif".format(real_service_name)
     verif_service = plan.add_service(verif_service_name, config_verif)
-    verif_url = "http://{}:{}/api".format(
+    verif_url = "http://{}:{}/".format(
         verif_service.hostname, verif_service.ports["http"].number
     )
 
