@@ -20,7 +20,8 @@ BLOCKSCOUT_VERIF_MAX_CPU = 1000
 BLOCKSCOUT_VERIF_MIN_MEMORY = 10
 BLOCKSCOUT_VERIF_MAX_MEMORY = 1024
 
-L2_RPC_PORT_NUM = 10110
+L2_START_RPC_PORT_NUM = 10110
+L2_RPC_PORT_OFFSET = 10000
 
 USED_PORTS = {
     constants.HTTP_PORT_ID: shared_utils.new_port_spec(
@@ -59,7 +60,7 @@ def launch_blockscout(
     )
     if isL2 == True:
         el_client_rpc_url = "http://{}:{}/".format(
-            el_context.ip_addr, L2_RPC_PORT_NUM
+            el_context.ip_addr, L2_START_RPC_PORT_NUM
         )
         real_service_name = "{}{}".format(
             real_service_name, "-layer2"
