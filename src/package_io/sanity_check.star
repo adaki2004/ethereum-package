@@ -208,7 +208,6 @@ ADDITIONAL_SERVICES_PARAMS = [
     "goomy_blob",
     "el_forkmon",
     "blockscout",
-    "blockscout_l2_1",
     "beacon_metrics_gazer",
     "dora",
     "full_beaconchain_explorer",
@@ -295,6 +294,8 @@ def sanity_check(plan, input_args):
     # Checks additional services
     if "additional_services" in input_args:
         for additional_services in input_args["additional_services"]:
+            if additional_services.startswith("blockscout_l2_"):
+                continue
             if additional_services not in ADDITIONAL_SERVICES_PARAMS:
                 fail(
                     "Invalid additional_services {0}, allowed fields: {1}".format(

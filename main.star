@@ -467,21 +467,25 @@ def run(plan, args={}):
                 global_node_selectors,
                 args_with_right_defaults.port_publisher,
                 index,
-                False
+                0
             )
             plan.print("Successfully launched blockscout")
-        elif additional_service == "blockscout_l2_1":
+        elif additional_service.startswith("blockscout_l2_"):
             plan.print("Launching blockscout for L2s")
-            blockscout_sc_verif_url = blockscout.launch_blockscout(
-                plan,
-                all_el_contexts,
-                persistent,
-                global_node_selectors,
-                args_with_right_defaults.port_publisher,
-                index,
-                True
-            )
-            plan.print("Successfully launched blockscout")
+            # Extract the number (of L2s and hence explorer needed) from the end of the string
+            l2_number = int(additional_service.split("_")[-1])
+
+            for i in range(1, l2_number+1):
+                blockscout_sc_verif_url = blockscout.launch_blockscout(
+                    plan,
+                    all_el_contexts,
+                    persistent,
+                    global_node_selectors,
+                    args_with_right_defaults.port_publisher,
+                    index,
+                    i
+                )
+                plan.print("Successfully launched blockscout")
         elif additional_service == "dora":
             plan.print("Launching dora")
             dora_config_template = read_file(static_files.DORA_CONFIG_TEMPLATE_FILEPATH)

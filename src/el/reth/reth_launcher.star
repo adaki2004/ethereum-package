@@ -143,12 +143,17 @@ def launch(
 def parse_extra_params(extra_params):
     cmd = []
     num_of_l2s = None
+    skip_next = False
     for i in range(0, len(extra_params)):
+        if skip_next:
+            skip_next = False
+            continue
+
         param = extra_params[i]
         if param == "--num_of_l2s":
             if i + 1 < len(extra_params):
                 num_of_l2s = int(extra_params[i + 1])
-                i += 1  # Skip the next item as it's the value for --num_of_l2s
+                skip_next = True  # Skip the next iteration
             else:
                 fail("--num_of_l2s flag provided without a value")
         else:
