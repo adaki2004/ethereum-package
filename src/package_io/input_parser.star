@@ -88,7 +88,7 @@ def input_parser(plan, input_args):
     # add default eth2 input params
     result["dora_params"] = get_default_dora_params()
     result["mev_params"] = get_default_mev_params(
-        result.get("mev_type"), result["network_params"]["preset"]
+        result.get("mev_type"), result["network_params"]["preset"], result.get("mev_params")
     )
     if (
         result["network_params"]["network"] == constants.NETWORK_NAME.kurtosis
@@ -179,7 +179,7 @@ def input_parser(plan, input_args):
         pass
     else:
         fail(
-            "Unsupported MEV type: {0}, please use 'mock', 'flashbots' or 'mev-rs' type".format(
+            "Unsupported MEV type: {0}, please use 'mock', 'flashbots', 'mev-rs' or 'gwyneth-rbuilder' type".format(
                 result.get("mev_type")
             )
         )
@@ -198,6 +198,8 @@ def input_parser(plan, input_args):
                 el_extra_env_vars=participant["el_extra_env_vars"],
                 el_extra_labels=participant["el_extra_labels"],
                 el_tolerations=participant["el_tolerations"],
+                el_l2_networks=participant["el_l2_networks"],
+                el_l2_volumes=participant["el_l2_volumes"],
                 cl_type=participant["cl_type"],
                 cl_image=participant["cl_image"],
                 cl_log_level=participant["cl_log_level"],
@@ -313,6 +315,12 @@ def input_parser(plan, input_args):
             mev_flood_seconds_per_bundle=result["mev_params"][
                 "mev_flood_seconds_per_bundle"
             ],
+            # Set to default values if gwyneth, set to none otherwise
+            l1_gwyneth_address=result["mev_params"]["l1_gwyneth_address"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            l1_proposer_pk=result["mev_params"]["l1_proposer_pk"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            # Either case default is []
+            l2_networks=result["mev_params"]["l2_networks"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            l2_volumes=result["mev_params"]["l2_volumes"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
         )
         if result["mev_params"]
         else None,
@@ -915,14 +923,8 @@ def get_default_dora_params():
         "env": {},
     }
 
-def get_default_l2_builder_params(l2_type):
-    if l2_type == ""
-    return {
-        "image": "",
-        "env": {},
-    }
 
-def get_default_mev_params(mev_type, preset):
+def get_default_mev_params(mev_type, preset, mev_params):
     mev_relay_image = constants.DEFAULT_FLASHBOTS_RELAY_IMAGE
     mev_builder_image = constants.DEFAULT_FLASHBOTS_BUILDER_IMAGE
     if preset == "minimal":
@@ -963,7 +965,7 @@ def get_default_mev_params(mev_type, preset):
         mev_builder_extra_args = ["--mev-builder-config=" + "/config/config.toml"]
 
     if mev_type == constants.GWYNETH_MEV_TYPE:
-        # TODO(Cecilia): Add the default image for the L2 builder
+        # Cecilia: none of these are currently used
         return {
             "mev_relay_image": None,
             "mev_builder_image": constants.DEFAULT_GWYNETH_RBUILDER_IMAGE,
@@ -971,19 +973,18 @@ def get_default_mev_params(mev_type, preset):
             "mev_builder_extra_data": None,
             "mev_builder_extra_args": [],
             "mev_boost_image": None,
-            "mev_boost_args": ["mev-boost", "--relay-check"],
+            "mev_boost_args": [],
             "mev_relay_api_extra_args": [],
             "mev_relay_housekeeper_extra_args": [],
             "mev_relay_website_extra_args": [],
-            "mev_flood_image": "flashbots/mev-flood",
+            "mev_flood_image": None,
             "mev_flood_extra_args": [],
-            "mev_flood_seconds_per_bundle": 15,
-            "mev_builder_prometheus_config": {
-                "scrape_interval": "15s",
-                "labels": None,
-                "storage_tsdb_retention_time": "1d",
-                "storage_tsdb_retention_size": "512MB",
-            },
+            "mev_flood_seconds_per_bundle": None,
+            "mev_builder_prometheus_config": None,
+            "l1_gwyneth_address": mev_params.get("l1_gwyneth_address", constants.DEFAULT_L1_GWYNETH_ADDRESS),
+            "l1_proposer_pk": mev_params.get("l1_proposer_pk", constants.DEFAULT_L1_PROPOSER_PK),
+            "l2_networks": [],
+            "l2_volumes": [],
         }
 
     return {
@@ -1096,7 +1097,7 @@ def enrich_disable_peer_scoring(parsed_arguments_dict):
 
 
 # TODO perhaps clean this up into a map
-def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type):
+def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type, mev_params):
     for index, participant in enumerate(parsed_arguments_dict["participants"]):
         index_str = shared_utils.zfill_custom(
             index + 1, len(str(len(parsed_arguments_dict["participants"])))
@@ -1144,6 +1145,10 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
             participant["vc_extra_params"].append("--enable-builder")
         if participant["cl_type"] == "grandine":
             participant["cl_extra_params"].append("--builder-url={0}".format(mev_url))
+
+        if mev_type == constants.GWYNETH_MEV_TYPE and participant["el_type"] == constants.EL_TYPE.gwyneth:
+            mev_params["l2_networks"] = participant["el_l2_networks"]
+            mev_params["l2_volumes"] = participant["el_l2_volumes"]
 
     num_participants = len(parsed_arguments_dict["participants"])
     index_str = shared_utils.zfill_custom(
@@ -1202,31 +1207,24 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         mev_participant["el_type"] = "reth-builder"
         mev_participant.update(
             {
-                "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
-                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
-                "cl_log_level": parsed_arguments_dict["global_log_level"],
                 "cl_extra_params": [
                     "--always-prepare-payload",
                     "--prepare-payload-lookahead",
                     "12000",
-                    "--disable-peer-scoring",
                 ],
                 "el_extra_params": parsed_arguments_dict["mev_params"][
                     "mev_builder_extra_args"
                 ],
-                "validator_count": 0,
             }
         )
         parsed_arguments_dict["participants"].append(mev_participant)
 
-    if mev_type == const.GWYNETH_MEV_TYPE:
+    if mev_type == constants.GWYNETH_MEV_TYPE:
         for participant in parsed_arguments_dict["participant"]:
             if participant["el_type"] == constants.EL_TYPE.gwyneth:
                 participant.update(
                     {
-                        "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
                         "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
-                        "cl_log_level": parsed_arguments_dict["global_log_level"],
                         "cl_extra_params": [
                             "--always-prepare-payload",
                             "--prepare-payload-lookahead",

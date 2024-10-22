@@ -6,7 +6,7 @@ el_shared = import_module("../el_shared.star")
 node_metrics = import_module("../../node_metrics_info.star")
 constants = import_module("../../package_io/constants.star")
 mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launcher.star")
-gwyneth_builder = import_module("../../mev/gwyneth/rbuilder_launcher.star")
+rbuilder_launcher = import_module("../../mev/gwyneth/rbuilder_launcher.star")
 
 RPC_PORT_NUM = 8545
 L2_RPC_PORT_NUM = 10110
@@ -24,7 +24,7 @@ METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
-GWYNETH_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/gwyneth"
+GWYNETH_DATA_DIRPATH = "/data/reth/l2-data"
 GWYNETH_DEFAULT_IPC = "/tmp/reth.ipc"
 
 ENTRYPOINT_ARGS = ["sh", "-c"]
@@ -273,11 +273,14 @@ def get_config(
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
 
     if launcher.gwyneth:
-        files[GWYNETH_DATA_DIRPATH_ON_CLIENT_CONTAINER] = Directory(
-            persistent_key=gwyneth_builder.RBUILDER_DATA_PATH,
-            size=gwyneth_builder.L2_VOLUME_SIZE,
-        )
-        files["{0}-{1}".format(GWYNETH_DEFAULT_IPC, launcher.l2_chain_id)] = "reth.ipc-{0}".format(launcher.l2_chain_id)
+        if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
+            fail("The number of L2 networks and volumes must be the same")
+        for (network, volume) in zip(launcher.el_l2_networks, launcher.el_l2_volumes):
+            files["{0}-{1}".format(GWYNETH_DATA_DIRPATH, network)] = Directory(
+                persistent_key="{0}-{1}".format(rbuilder_launcher.L2_DATA_PERSISTENCE_KEY, network),
+                size=volume,
+            )
+            files["{0}-{1}".format(GWYNETH_DEFAULT_IPC, network)] = "{0}-{1}.ipc".format(rbuilder_launcher.L2_IPC_PERSISTENCE_KEY, network)
         
 
     return ServiceConfig(
@@ -314,13 +317,14 @@ def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):
         gwyneth=False
     )
 
-def new_gwyneth_launcher(el_cl_genesis_data, jwt_file, network, builder=False, l2_chain_id):
+def new_gwyneth_launcher(el_cl_genesis_data, jwt_file, network, el_l2_networks, el_l2_volumes):
     return struct(
         el_cl_genesis_data=el_cl_genesis_data,
         jwt_file=jwt_file,
         network=network,
-        builder=builder,
+        builder=False,
         gwyneth=True,
-        l2_chain_id=l2_chain_id
+        el_l2_networks=el_l2_networks,
+        el_l2_volumes=el_l2_volumes
         #TODO(Cecilia): reserve for more args
     )
