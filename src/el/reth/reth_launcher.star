@@ -8,7 +8,8 @@ constants = import_module("../../package_io/constants.star")
 mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launcher.star")
 
 RPC_PORT_NUM = 8545
-L2_RPC_PORT_NUM = 10110
+L2_START_RPC_PORT_NUM = 10110
+L2_RPC_PORT_OFFSET = 10000
 WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
 ENGINE_RPC_PORT_NUM = 8551
@@ -139,6 +140,25 @@ def launch(
         [reth_metrics_info],
     )
 
+def parse_extra_params(extra_params):
+    cmd = []
+    num_of_l2s = None
+    skip_next = False
+    for i in range(0, len(extra_params)):
+        if skip_next:
+            skip_next = False
+            continue
+
+        param = extra_params[i]
+        if param == "--num_of_l2s":
+            if i + 1 < len(extra_params):
+                num_of_l2s = int(extra_params[i + 1])
+                skip_next = True  # Skip the next iteration
+            else:
+                fail("--num_of_l2s flag provided without a value")
+        else:
+            cmd.append(param)
+    return cmd, num_of_l2s
 
 def get_config(
     plan,
@@ -167,6 +187,13 @@ def get_config(
 ):
     public_ports = {}
     discovery_port = DISCOVERY_PORT_NUM
+    
+    # By default it is 1 anyways, only need to supply this param in config file if bigger than 0
+    num_of_l2s = 0
+    cmd_from_extra_params = []
+    if len(extra_params) > 0:
+        cmd_from_extra_params, num_of_l2s = parse_extra_params(extra_params)
+
     if port_publisher.el_enabled:
         public_ports_for_component = shared_utils.get_public_ports_for_component(
             "el", port_publisher, participant_index
@@ -178,8 +205,31 @@ def get_config(
             constants.RPC_PORT_ID: public_ports_for_component[2],
             constants.WS_PORT_ID: public_ports_for_component[3],
             constants.METRICS_PORT_ID: public_ports_for_component[4],
-            constants.L2_RPC_PORT_ID: public_ports_for_component[5],
+            constants.L2_RPC_PORT_ID_1: public_ports_for_component[5],
         }
+
+        # Currently supporting 10 but 1 (10110) is "default" exposed
+        if num_of_l2s > 1:
+            for i in range(1, num_of_l2s):
+                if i == 1:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_2] = public_ports_for_component[6]
+                elif i == 2:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_3] = public_ports_for_component[7]
+                elif i == 3:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_4] = public_ports_for_component[8]
+                elif i == 4:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_5] = public_ports_for_component[9]
+                elif i == 5:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_6] = public_ports_for_component[10]
+                elif i == 6:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_7] = public_ports_for_component[11]
+                elif i == 7:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_8] = public_ports_for_component[12]
+                elif i == 8:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_9] = public_ports_for_component[13]
+                elif i == 9:
+                    additional_public_port_assignments[constants.L2_RPC_PORT_ID_10] = public_ports_for_component[14]
+
         public_ports.update(
             shared_utils.get_port_specs(additional_public_port_assignments)
         )
@@ -189,10 +239,33 @@ def get_config(
         constants.UDP_DISCOVERY_PORT_ID: discovery_port,
         constants.ENGINE_RPC_PORT_ID: ENGINE_RPC_PORT_NUM,
         constants.RPC_PORT_ID: RPC_PORT_NUM,
-        constants.L2_RPC_PORT_ID: L2_RPC_PORT_NUM,
+        constants.L2_RPC_PORT_ID_1: L2_START_RPC_PORT_NUM,
         constants.WS_PORT_ID: WS_PORT_NUM,
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
+
+    if num_of_l2s > 1:
+            for i in range(1, num_of_l2s):
+                l2_port_inside_container = L2_START_RPC_PORT_NUM + (i*L2_RPC_PORT_OFFSET)
+                if i == 1:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_2] = l2_port_inside_container
+                elif i == 2:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_3] = l2_port_inside_container
+                elif i == 3:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_4] = l2_port_inside_container
+                elif i == 4:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_5] = l2_port_inside_container
+                elif i == 5:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_6] = l2_port_inside_container
+                elif i == 6:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_7] = l2_port_inside_container
+                elif i == 7:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_8] = l2_port_inside_container
+                elif i == 8:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_9] = l2_port_inside_container
+                elif i == 9:
+                    used_port_assignments[constants.L2_RPC_PORT_ID_10] = l2_port_inside_container
+
     used_ports = shared_utils.get_port_specs(used_port_assignments)
 
     cmd = [
@@ -248,9 +321,8 @@ def get_config(
             )
         )
 
-    if len(extra_params) > 0:
-        # this is a repeated<proto type>, we convert it into Starlark
-        cmd.extend([param for param in extra_params])
+    if len(cmd_from_extra_params) > 0:
+        cmd.extend([param for param in cmd_from_extra_params])
 
     cmd_str = " ".join(cmd)
 

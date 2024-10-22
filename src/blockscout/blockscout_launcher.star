@@ -20,7 +20,8 @@ BLOCKSCOUT_VERIF_MAX_CPU = 1000
 BLOCKSCOUT_VERIF_MIN_MEMORY = 10
 BLOCKSCOUT_VERIF_MAX_MEMORY = 1024
 
-L2_RPC_PORT_NUM = 10110
+L2_START_RPC_PORT_NUM = 10110
+L2_RPC_PORT_OFFSET = 10000
 
 USED_PORTS = {
     constants.HTTP_PORT_ID: shared_utils.new_port_spec(
@@ -46,9 +47,8 @@ def launch_blockscout(
     global_node_selectors,
     port_publisher,
     additional_service_index,
-    isL2
+    nth_blockscout
 ):
-
     el_context = el_contexts[0]
 
     el_client_name = el_context.client_name
@@ -57,12 +57,15 @@ def launch_blockscout(
     el_client_rpc_url = "http://{}:{}/".format(
         el_context.ip_addr, el_context.rpc_port_num
     )
-    if isL2 == True:
+
+    # nth_blockscout means if we need addiitonal ones, we need to name the service differently (and obviously use different ports)
+    if nth_blockscout > 0:
+        additional_service_index = nth_blockscout
         el_client_rpc_url = "http://{}:{}/".format(
-            el_context.ip_addr, L2_RPC_PORT_NUM
+            el_context.ip_addr, L2_START_RPC_PORT_NUM + (nth_blockscout-1) * L2_RPC_PORT_OFFSET
         )
-        real_service_name = "{}{}".format(
-            real_service_name, "-layer2"
+        real_service_name = "{}{}{}".format(
+            real_service_name, "-layer2-", nth_blockscout
         )
 
     postgres_output = postgres.run(
@@ -79,6 +82,7 @@ def launch_blockscout(
         port_publisher,
         additional_service_index,
     )
+
     verif_service_name = "{}-verif".format(real_service_name)
     verif_service = plan.add_service(verif_service_name, config_verif)
     verif_url = "http://{}:{}/".format(

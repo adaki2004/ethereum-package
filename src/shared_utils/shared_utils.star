@@ -7,7 +7,7 @@ NOT_PROVIDED_APPLICATION_PROTOCOL = ""
 NOT_PROVIDED_WAIT = "not-provided-wait"
 
 MAX_PORTS_PER_CL_NODE = 5
-MAX_PORTS_PER_EL_NODE = 6
+MAX_PORTS_PER_EL_NODE = 15  # Add because we might launch +10 L2s. So 5+10 for now.
 MAX_PORTS_PER_VC_NODE = 3
 MAX_PORTS_PER_ADDITIONAL_SERVICE = 2
 
@@ -285,7 +285,16 @@ def get_port_specs(port_assignments):
         if port_id in [
             constants.TCP_DISCOVERY_PORT_ID,
             constants.RPC_PORT_ID,
-            constants.L2_RPC_PORT_ID,
+            constants.L2_RPC_PORT_ID_1,
+            constants.L2_RPC_PORT_ID_2,
+            constants.L2_RPC_PORT_ID_3,
+            constants.L2_RPC_PORT_ID_4,
+            constants.L2_RPC_PORT_ID_5,
+            constants.L2_RPC_PORT_ID_6,
+            constants.L2_RPC_PORT_ID_7,
+            constants.L2_RPC_PORT_ID_8,
+            constants.L2_RPC_PORT_ID_9,
+            constants.L2_RPC_PORT_ID_10,
             constants.ENGINE_RPC_PORT_ID,
             constants.ENGINE_WS_PORT_ID,
             constants.WS_RPC_PORT_ID,
