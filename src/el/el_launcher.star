@@ -105,6 +105,16 @@ def launch(
             ),
             "launch_method": nimbus_eth1.launch,
         },
+
+        constants.EL_TYPE.gwyneth: {
+            "launcher": reth.new_gwyneth_launcher(
+                el_cl_data,
+                jwt_file,
+                network_params.network,
+                l2_chain_id=network_id,
+            ),
+            "launch_method": reth.launch,
+        },
     }
 
     all_el_contexts = []

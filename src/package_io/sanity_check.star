@@ -8,6 +8,8 @@ PARTICIPANT_CATEGORIES = {
         "el_extra_params",
         "el_tolerations",
         "el_volume_size",
+        "el_l2_networks",
+        "el_l2_volumes",
         "el_min_cpu",
         "el_max_cpu",
         "el_min_mem",
@@ -67,6 +69,8 @@ PARTICIPANT_MATRIX_PARAMS = {
             "el_max_cpu",
             "el_min_mem",
             "el_max_mem",
+            "el_l2_networks",
+            "el_l2_volumes",
         ],
         "cl": [
             "cl_type",

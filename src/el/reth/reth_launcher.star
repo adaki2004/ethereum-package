@@ -6,6 +6,7 @@ el_shared = import_module("../el_shared.star")
 node_metrics = import_module("../../node_metrics_info.star")
 constants = import_module("../../package_io/constants.star")
 mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launcher.star")
+gwyneth_builder = import_module("../../mev/gwyneth/rbuilder_launcher.star")
 
 RPC_PORT_NUM = 8545
 L2_RPC_PORT_NUM = 10110
@@ -23,6 +24,8 @@ METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
+GWYNETH_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/gwyneth"
+GWYNETH_DEFAULT_IPC = "/tmp/reth.ipc"
 
 ENTRYPOINT_ARGS = ["sh", "-c"]
 
@@ -87,9 +90,7 @@ def launch(
 
     config = get_config(
         plan,
-        launcher.el_cl_genesis_data,
-        launcher.jwt_file,
-        launcher.network,
+        launcher,
         image,
         service_name,
         existing_el_clients,
@@ -106,7 +107,6 @@ def launch(
         el_volume_size,
         tolerations,
         node_selectors,
-        launcher.builder,
         port_publisher,
         participant_index,
     )
@@ -142,9 +142,7 @@ def launch(
 
 def get_config(
     plan,
-    el_cl_genesis_data,
-    jwt_file,
-    network,
+    launcher,
     image,
     service_name,
     existing_el_clients,
@@ -161,10 +159,14 @@ def get_config(
     el_volume_size,
     tolerations,
     node_selectors,
-    builder,
     port_publisher,
     participant_index,
 ):
+    el_cl_genesis_data = launcher.el_cl_genesis_data
+    jwt_file = launcher.jwt_file
+    network = launcher.network
+    builder = launcher.builder
+
     public_ports = {}
     discovery_port = DISCOVERY_PORT_NUM
     if port_publisher.el_enabled:
@@ -270,6 +272,14 @@ def get_config(
             mev_rs_builder.MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
 
+    if launcher.gwyneth:
+        files[GWYNETH_DATA_DIRPATH_ON_CLIENT_CONTAINER] = Directory(
+            persistent_key=gwyneth_builder.RBUILDER_DATA_PATH,
+            size=gwyneth_builder.L2_VOLUME_SIZE,
+        )
+        files["{0}-{1}".format(GWYNETH_DEFAULT_IPC, launcher.l2_chain_id)] = "reth.ipc-{0}".format(launcher.l2_chain_id)
+        
+
     return ServiceConfig(
         image=image,
         ports=used_ports,
@@ -301,4 +311,16 @@ def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):
         jwt_file=jwt_file,
         network=network,
         builder=builder,
+        gwyneth=False
+    )
+
+def new_gwyneth_launcher(el_cl_genesis_data, jwt_file, network, builder=False, l2_chain_id):
+    return struct(
+        el_cl_genesis_data=el_cl_genesis_data,
+        jwt_file=jwt_file,
+        network=network,
+        builder=builder,
+        gwyneth=True,
+        l2_chain_id=l2_chain_id
+        #TODO(Cecilia): reserve for more args
     )

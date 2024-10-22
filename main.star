@@ -66,7 +66,18 @@ MEV_BOOST_SHOULD_CHECK_RELAY = True
 PATH_TO_PARSED_BEACON_STATE = "/genesis/output/parsedBeaconState.json"
 
 
+
 def run(plan, args={}):
+    """Launches an arbitrarily complex ethereum testnet based on the arguments provided
+
+    Args:
+        args: A YAML or JSON argument to configure the network; example https://github.com/ethpandaops/ethereum-package/blob/main/network_params.yaml
+    """
+
+    args_with_right_defaults = input_parser.input_parser(plan, args)
+
+
+def run_(plan, args={}):
     """Launches an arbitrarily complex ethereum testnet based on the arguments provided
 
     Args:

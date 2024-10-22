@@ -8,6 +8,7 @@ EL_TYPE = struct(
     reth_builder="reth-builder",
     ethereumjs="ethereumjs",
     nimbus="nimbus",
+    gwyneth="gwyneth",
 )
 
 CL_TYPE = struct(
@@ -81,6 +82,8 @@ KEYMANAGER_MOUNT_PATH_ON_CONTAINER = (
 MOCK_MEV_TYPE = "mock"
 FLASHBOTS_MEV_TYPE = "flashbots"
 MEV_RS_MEV_TYPE = "mev-rs"
+GWYNETH_MEV_TYPE = "rbuilder"
+DEFAULT_GWYNETH_RBUILDER_IMAGE = "gwyneth-rbuilder"
 
 DEFAULT_SNOOPER_IMAGE = "ethpandaops/rpc-snooper:latest"
 DEFAULT_FLASHBOTS_RELAY_IMAGE = "flashbots/mev-boost-relay:0.27"
