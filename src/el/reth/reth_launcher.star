@@ -24,8 +24,8 @@ METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
-GWYNETH_DATA_DIRPATH = "/data/reth/l2-data"
-GWYNETH_DEFAULT_IPC = "/tmp/reth.ipc"
+L2_DATA_BASE = "/data/reth/l2-data"
+IPC_BASE = "/tmp/reth.ipc"
 
 ENTRYPOINT_ARGS = ["sh", "-c"]
 
@@ -170,9 +170,11 @@ def get_config(
     public_ports = {}
     discovery_port = DISCOVERY_PORT_NUM
     if port_publisher.el_enabled:
+        # Random port range
         public_ports_for_component = shared_utils.get_public_ports_for_component(
             "el", port_publisher, participant_index
         )
+        # PortSpecs for each used ports, public_ports_for_component[0]
         public_ports, discovery_port = el_shared.get_general_el_public_port_specs(
             public_ports_for_component
         )
@@ -182,6 +184,7 @@ def get_config(
             constants.METRICS_PORT_ID: public_ports_for_component[4],
             constants.L2_RPC_PORT_ID: public_ports_for_component[5],
         }
+        # Convert all to PortSpecs struct
         public_ports.update(
             shared_utils.get_port_specs(additional_public_port_assignments)
         )
@@ -276,17 +279,17 @@ def get_config(
         if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
             fail("The number of L2 networks and volumes must be the same")
         for (network, volume) in zip(launcher.el_l2_networks, launcher.el_l2_volumes):
-            files["{0}-{1}".format(GWYNETH_DATA_DIRPATH, network)] = Directory(
+            files["{0}-{1}".format(L2_DATA_BASE, network)] = Directory(
                 persistent_key="{0}-{1}".format(rbuilder_launcher.L2_DATA_PERSISTENCE_KEY, network),
                 size=volume,
             )
-            files["{0}-{1}".format(GWYNETH_DEFAULT_IPC, network)] = "{0}-{1}.ipc".format(rbuilder_launcher.L2_IPC_PERSISTENCE_KEY, network)
+            files["{0}-{1}".format(IPC_BASE, network)] = "{0}-{1}.ipc".format(rbuilder_launcher.L2_IPC_PERSISTENCE_KEY, network)
         
 
     return ServiceConfig(
         image=image,
-        ports=used_ports,
-        public_ports=public_ports,
+        ports=used_ports, # internal
+        public_ports=public_ports, # external
         cmd=[cmd_str],
         files=files,
         entrypoint=ENTRYPOINT_ARGS,

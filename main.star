@@ -49,6 +49,7 @@ mev_flood = import_module("./src/mev/flashbots/mev_flood/mev_flood_launcher.star
 mev_custom_flood = import_module(
     "./src/mev/flashbots/mev_custom_flood/mev_custom_flood_launcher.star"
 )
+rbuilder_launcher = import_module("./src/mev/gwyneth/rbuilder_launcher.star")  
 broadcaster = import_module("./src/broadcaster/broadcaster.star")
 assertoor = import_module("./src/assertoor/assertoor_launcher.star")
 get_prefunded_accounts = import_module(
@@ -73,17 +74,6 @@ def run(plan, args={}):
     Args:
         args: A YAML or JSON argument to configure the network; example https://github.com/ethpandaops/ethereum-package/blob/main/network_params.yaml
     """
-
-    args_with_right_defaults = input_parser.input_parser(plan, args)
-
-
-def run_(plan, args={}):
-    """Launches an arbitrarily complex ethereum testnet based on the arguments provided
-
-    Args:
-        args: A YAML or JSON argument to configure the network; example https://github.com/ethpandaops/ethereum-package/blob/main/network_params.yaml
-    """
-
     args_with_right_defaults = input_parser.input_parser(plan, args)
 
     num_participants = len(args_with_right_defaults.participants)
@@ -319,7 +309,24 @@ def run_(plan, args={}):
         )
         mev_endpoints.append(endpoint)
         mev_endpoint_names.append(args_with_right_defaults.mev_type)
-
+    elif args_with_right_defaults.mev_type == constants.GWYNETH_MEV_TYPE:
+        for index, participant in enumerate(all_participants):
+            if index in mev_params.attach_participants and participant.el_type == constants.EL_TYPE.gwyneth:            
+                plan.print("Starting rbuilder for participant {0}: {1}".format(index, participant.el_type))
+                beacon_uri = participant.cl_context.beacon_http_url
+                el_rpc_uri = "http://{0}:{1}".format(
+                    participant.el_context.ip_addr, participant.el_context.rpc_port_num
+                )
+                plan.print("    beacon_uri: {0}".format(beacon_uri))
+                rbuilder_launcher.launch(
+                    plan,
+                    beacon_uri,
+                    participant.el_l2_networks,
+                    participant.el_context
+                    mev_params,
+                    global_node_selectors,
+                )
+                # TODO(Cecilia): add relay for L2?
     # spin up the mev boost contexts if some endpoints for relays have been passed
     all_mevboost_contexts = []
     if mev_endpoints:

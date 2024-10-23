@@ -88,7 +88,7 @@ def input_parser(plan, input_args):
     # add default eth2 input params
     result["dora_params"] = get_default_dora_params()
     result["mev_params"] = get_default_mev_params(
-        result.get("mev_type"), result["network_params"]["preset"], result.get("mev_params")
+        result.get("mev_type"), result["network_params"]["preset"]
     )
     if (
         result["network_params"]["network"] == constants.NETWORK_NAME.kurtosis
@@ -315,12 +315,11 @@ def input_parser(plan, input_args):
             mev_flood_seconds_per_bundle=result["mev_params"][
                 "mev_flood_seconds_per_bundle"
             ],
-            # Set to default values if gwyneth, set to none otherwise
             l1_gwyneth_address=result["mev_params"]["l1_gwyneth_address"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
             l1_proposer_pk=result["mev_params"]["l1_proposer_pk"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
-            # Either case default is []
-            l2_networks=result["mev_params"]["l2_networks"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
-            l2_volumes=result["mev_params"]["l2_volumes"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            attach_participants=result["mev_params"]["attach_participants"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            # l2_networks=result["mev_params"]["l2_networks"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
+            # l2_volumes=result["mev_params"]["l2_volumes"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
         )
         if result["mev_params"]
         else None,
@@ -924,7 +923,7 @@ def get_default_dora_params():
     }
 
 
-def get_default_mev_params(mev_type, preset, mev_params):
+def get_default_mev_params(mev_type, preset):
     mev_relay_image = constants.DEFAULT_FLASHBOTS_RELAY_IMAGE
     mev_builder_image = constants.DEFAULT_FLASHBOTS_BUILDER_IMAGE
     if preset == "minimal":
@@ -981,10 +980,11 @@ def get_default_mev_params(mev_type, preset, mev_params):
             "mev_flood_extra_args": [],
             "mev_flood_seconds_per_bundle": None,
             "mev_builder_prometheus_config": None,
-            "l1_gwyneth_address": mev_params.get("l1_gwyneth_address", constants.DEFAULT_L1_GWYNETH_ADDRESS),
-            "l1_proposer_pk": mev_params.get("l1_proposer_pk", constants.DEFAULT_L1_PROPOSER_PK),
-            "l2_networks": [],
-            "l2_volumes": [],
+            "l1_gwyneth_address": constants.DEFAULT_L1_GWYNETH_ADDRESS,
+            "l1_proposer_pk": constants.DEFAULT_L1_PROPOSER_PK,
+            "attach_participants": [],
+            # "l2_networks": [],
+            # "l2_volumes": [],
         }
 
     return {
@@ -1146,9 +1146,13 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         if participant["cl_type"] == "grandine":
             participant["cl_extra_params"].append("--builder-url={0}".format(mev_url))
 
-        if mev_type == constants.GWYNETH_MEV_TYPE and participant["el_type"] == constants.EL_TYPE.gwyneth:
-            mev_params["l2_networks"] = participant["el_l2_networks"]
-            mev_params["l2_volumes"] = participant["el_l2_volumes"]
+        # if (
+        #     mev_type == constants.GWYNETH_MEV_TYPE 
+        #     and participant["el_type"] == constants.EL_TYPE.gwyneth
+        #     and index in mev_params["attach_participants"]
+        # ):
+        #     mev_params["l2_networks"] = participant["el_l2_networks"]
+        #     mev_params["l2_volumes"] = participant["el_l2_volumes"]
 
     num_participants = len(parsed_arguments_dict["participants"])
     index_str = shared_utils.zfill_custom(
@@ -1237,25 +1241,6 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
                         "validator_count": 0,
                     }
                 )
-        mev_participant["el_type"] = "gwyneth-builder"
-        mev_participant.update(
-            {
-                "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
-                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
-                "cl_log_level": parsed_arguments_dict["global_log_level"],
-                "cl_extra_params": [
-                    "--always-prepare-payload",
-                    "--prepare-payload-lookahead",
-                    "12000",
-                    "--disable-peer-scoring",
-                ],
-                "el_extra_params": parsed_arguments_dict["mev_params"][
-                    "mev_builder_extra_args"
-                ],
-                "validator_count": 0,
-            }
-        )
-        parsed_arguments_dict["participants"].append(mev_participant)
     return parsed_arguments_dict
 
 
