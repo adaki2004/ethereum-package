@@ -9,7 +9,7 @@ mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launche
 
 RPC_PORT_NUM = 8545
 L2_START_RPC_PORT_NUM = 10110
-L2_RPC_PORT_OFFSET = 10000
+L2_RPC_PORT_OFFSET = 100
 WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
 ENGINE_RPC_PORT_NUM = 8551
