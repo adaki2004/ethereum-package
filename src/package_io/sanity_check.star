@@ -186,6 +186,9 @@ SUBCATEGORY_PARAMS = {
         "mev_flood_extra_args",
         "mev_flood_seconds_per_bundle",
         "custom_flood_params",
+        "l1_gwyneth_address",
+        "l1_proposer_pk",
+        "attach_participants",
     ],
     "xatu_sentry_params": [
         "xatu_sentry_image",

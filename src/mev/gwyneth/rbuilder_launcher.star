@@ -1,4 +1,4 @@
-static_files = import_module("../../../static_files/static_files.star")
+static_files = import_module("../../static_files/static_files.star")
 shared_utils = import_module("../../shared_utils/shared_utils.star")
 
 # let datadir_base = "/data/reth/gwyneth";
@@ -11,7 +11,7 @@ RBUILDER_CONFIG_FILE = "config-gwyneth-reth.toml"
 
 L2_DATA_PERSISTENCE_KEY = "l2-data"
 L2_IPC_PERSISTENCE_KEY = "reth-ipc"
-RBUILDER_RPC_PORT = "9646"
+RBUILDER_RPC_PORT = 9646
 
 
 USED_PORTS = {
@@ -34,10 +34,10 @@ def launch(
     files = {
         L1_DATA_PATH: Directory(persistent_key="data-{0}".format(el_context.service_name))
     }
-    for i, network in enumerate(el_l2_networks).
-        l2_data_path.append("{0}-{1}".format(L2_DATA_BASE, network))
+    for i, network in enumerate(el_l2_networks):
+        l2_data_paths.append("{0}-{1}".format(L2_DATA_BASE, network))
         l2_ipc_paths.append("{0}-{1}".format(IPC_BASE, network))
-        files[l2_data_path[i]] = Directory(persistent_key="{0}-{1}".format(L2_DATA_PERSISTENCE_KEY, network),)
+        files[l2_data_paths[i]] = Directory(persistent_key="{0}-{1}".format(L2_DATA_PERSISTENCE_KEY, network),)
         files[l2_ipc_paths[i]] = "{0}-{1}.ipc".format(L2_IPC_PERSISTENCE_KEY, network)
 
 

@@ -2,7 +2,7 @@ participants:
   - el_type: gwyneth
     el_image: gwyneth-reth
     el_l2_networks: ['160010', '160011']
-    el_l2_volumes: [30000, 30000] # 30GB
+    el_l2_volumes: [3000, 3000] # 3GB
     cl_type: lighthouse
     cl_image: sigp/lighthouse:latest
     cl_extra_params: [--always-prepare-payload, --prepare-payload-lookahead, "12000"]

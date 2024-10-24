@@ -322,9 +322,9 @@ def run(plan, args={}):
                     plan,
                     beacon_uri,
                     participant.el_l2_networks,
-                    participant.el_context
+                    participant.el_context,
                     mev_params,
-                    global_node_selectors,
+                    global_node_selectors
                 )
                 # TODO(Cecilia): add relay for L2?
     # spin up the mev boost contexts if some endpoints for relays have been passed

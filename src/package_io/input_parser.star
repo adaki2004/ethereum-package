@@ -186,6 +186,13 @@ def input_parser(plan, input_args):
 
     if result["port_publisher"]["nat_exit_ip"] == "auto":
         result["port_publisher"]["nat_exit_ip"] = get_public_ip(plan)
+    
+
+    for participant in result["participants"]:
+        for i in range(len(participant["el_l2_networks"])):
+            if i >= len(participant["el_l2_volumes"]):
+                participant["el_l2_volumes"].append(constants.DEFAULT_L2_VOLUME)
+   
 
     return struct(
         participants=[
@@ -318,8 +325,6 @@ def input_parser(plan, input_args):
             l1_gwyneth_address=result["mev_params"]["l1_gwyneth_address"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
             l1_proposer_pk=result["mev_params"]["l1_proposer_pk"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
             attach_participants=result["mev_params"]["attach_participants"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
-            # l2_networks=result["mev_params"]["l2_networks"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
-            # l2_volumes=result["mev_params"]["l2_volumes"] if result.get("mev_type") == constants.GWYNETH_MEV_TYPE else None,
         )
         if result["mev_params"]
         else None,
@@ -1097,7 +1102,7 @@ def enrich_disable_peer_scoring(parsed_arguments_dict):
 
 
 # TODO perhaps clean this up into a map
-def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type, mev_params):
+def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type):
     for index, participant in enumerate(parsed_arguments_dict["participants"]):
         index_str = shared_utils.zfill_custom(
             index + 1, len(str(len(parsed_arguments_dict["participants"])))
@@ -1224,7 +1229,7 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         parsed_arguments_dict["participants"].append(mev_participant)
 
     if mev_type == constants.GWYNETH_MEV_TYPE:
-        for participant in parsed_arguments_dict["participant"]:
+        for participant in parsed_arguments_dict["participants"]:
             if participant["el_type"] == constants.EL_TYPE.gwyneth:
                 participant.update(
                     {
