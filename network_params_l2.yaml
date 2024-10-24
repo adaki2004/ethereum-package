@@ -11,8 +11,6 @@ participants:
     el_l2_networks: ['160010', '160012']
     cl_type: teku
     cl_image: consensys/teku:latest
-network_params:
-  network_id: '1'
 additional_services:
   - blockscout
   - blockscout_l2_1

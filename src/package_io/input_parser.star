@@ -174,6 +174,7 @@ def input_parser(plan, input_args):
             MEV_BOOST_SERVICE_NAME_PREFIX,
             MEV_BOOST_PORT,
             result.get("mev_type"),
+            result.get("mev_params"),
         )
     elif result.get("mev_type") == None:
         pass
@@ -973,7 +974,7 @@ def get_default_mev_params(mev_type, preset):
         return {
             "mev_relay_image": None,
             "mev_builder_image": constants.DEFAULT_GWYNETH_RBUILDER_IMAGE,
-            "mev_builder_cl_image": mev_builder_cl_image,
+            "mev_builder_cl_image": None,
             "mev_builder_extra_data": None,
             "mev_builder_extra_args": [],
             "mev_boost_image": None,
@@ -1100,7 +1101,7 @@ def enrich_disable_peer_scoring(parsed_arguments_dict):
 
 
 # TODO perhaps clean this up into a map
-def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type):
+def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_type, mev_params):
     for index, participant in enumerate(parsed_arguments_dict["participants"]):
         index_str = shared_utils.zfill_custom(
             index + 1, len(str(len(parsed_arguments_dict["participants"])))
@@ -1232,21 +1233,19 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         parsed_arguments_dict["participants"].append(mev_participant)
 
     if mev_type == constants.GWYNETH_MEV_TYPE:
-        for participant in parsed_arguments_dict["participants"]:
-            if participant["el_type"] == constants.EL_TYPE.gwyneth:
+        for i, participant in enumerate(parsed_arguments_dict["participants"]):
+            if i in mev_params["attach_participants"]:
+                if participant["el_type"] != constants.EL_TYPE.gwyneth or participant["cl_type"] != constants.CL_TYPE.lighthouse:
+                    fail(
+                        "Gwyneth MEV type (rbuilder) requires Gwyneth EL and Lighthouse CL"
+                    )                
                 participant.update(
                     {
-                        "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
                         "cl_extra_params": [
                             "--always-prepare-payload",
                             "--prepare-payload-lookahead",
                             "12000",
-                            "--disable-peer-scoring",
                         ],
-                        "el_extra_params": parsed_arguments_dict["mev_params"][
-                            "mev_builder_extra_args"
-                        ],
-                        "validator_count": 0,
                     }
                 )
     return parsed_arguments_dict
