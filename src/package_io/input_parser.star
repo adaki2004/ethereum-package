@@ -973,7 +973,7 @@ def get_default_mev_params(mev_type, preset):
         return {
             "mev_relay_image": None,
             "mev_builder_image": constants.DEFAULT_GWYNETH_RBUILDER_IMAGE,
-            "mev_builder_cl_image": None,
+            "mev_builder_cl_image": mev_builder_cl_image,
             "mev_builder_extra_data": None,
             "mev_builder_extra_args": [],
             "mev_boost_image": None,
@@ -988,8 +988,6 @@ def get_default_mev_params(mev_type, preset):
             "l1_gwyneth_address": constants.DEFAULT_L1_GWYNETH_ADDRESS,
             "l1_proposer_pk": constants.DEFAULT_L1_PROPOSER_PK,
             "attach_participants": [],
-            # "l2_networks": [],
-            # "l2_volumes": [],
         }
 
     return {
@@ -1216,14 +1214,19 @@ def enrich_mev_extra_params(parsed_arguments_dict, mev_prefix, mev_port, mev_typ
         mev_participant["el_type"] = "reth-builder"
         mev_participant.update(
             {
+                "el_image": parsed_arguments_dict["mev_params"]["mev_builder_image"],
+                "cl_image": parsed_arguments_dict["mev_params"]["mev_builder_cl_image"],
+                "cl_log_level": parsed_arguments_dict["global_log_level"],
                 "cl_extra_params": [
                     "--always-prepare-payload",
                     "--prepare-payload-lookahead",
                     "12000",
+                    "--disable-peer-scoring",
                 ],
                 "el_extra_params": parsed_arguments_dict["mev_params"][
                     "mev_builder_extra_args"
                 ],
+                "validator_count": 0,
             }
         )
         parsed_arguments_dict["participants"].append(mev_participant)

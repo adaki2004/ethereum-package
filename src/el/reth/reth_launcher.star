@@ -1,3 +1,4 @@
+static_files = import_module("../../static_files/static_files.star")
 shared_utils = import_module("../../shared_utils/shared_utils.star")
 input_parser = import_module("../../package_io/input_parser.star")
 el_context = import_module("../el_context.star")
@@ -24,8 +25,8 @@ METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
-L2_DATA_BASE = "/data/reth/l2-data"
-IPC_BASE = "/tmp/reth.ipc"
+L2_DATA_MOUNT = "/data/reth/l2-data"
+IPC_MOUNT = "/tmp/reth.ipc"
 
 ENTRYPOINT_ARGS = ["sh", "-c"]
 
@@ -88,7 +89,7 @@ def launch(
 
     cl_client_name = service_name.split("-")[3]
 
-    config = get_config(
+    (config, ipc_files) = get_config(
         plan,
         launcher,
         image,
@@ -137,6 +138,7 @@ def launch(
         ws_url,
         service_name,
         [reth_metrics_info],
+        ipc_files,
     )
 
 
@@ -275,18 +277,24 @@ def get_config(
             mev_rs_builder.MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
 
+
+    ipc_files = []
     if launcher.gwyneth:
         if len(launcher.el_l2_networks) != len(launcher.el_l2_volumes):
             fail("The number of L2 networks and volumes must be the same")
         for (network, volume) in zip(launcher.el_l2_networks, launcher.el_l2_volumes):
-            files["{0}-{1}".format(L2_DATA_BASE, network)] = Directory(
-                persistent_key="{0}-{1}".format(rbuilder_launcher.L2_DATA_PERSISTENCE_KEY, network),
+            files["{0}-{1}".format(L2_DATA_MOUNT, network)] = Directory(
+                persistent_key="data-{0}-{1}".format(service_name, network),
                 size=volume,
             )
-            files["{0}-{1}".format(IPC_BASE, network)] = "{0}-{1}.ipc".format(rbuilder_launcher.L2_IPC_PERSISTENCE_KEY, network)
+            # /tmp/reth.ipc: /static_files/gwyneth/reth.ipc-160010
+            ipc_file_path = "{0}-{1}".format(static_files.L2_IPC_FILEPATH, network)
+            ipc_file = plan.upload_files(src=ipc_file_path, name="reth.ipc-{0}-{1}".format(network, service_name))
+            files["{0}-{1}".format(IPC_MOUNT, network)] = ipc_file
+            ipc_files.append(ipc_file)
         
 
-    return ServiceConfig(
+    config = ServiceConfig(
         image=image,
         ports=used_ports, # internal
         public_ports=public_ports, # external
@@ -309,6 +317,7 @@ def get_config(
         tolerations=tolerations,
         node_selectors=node_selectors,
     )
+    return (config, ipc_files)
 
 
 def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):

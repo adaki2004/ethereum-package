@@ -99,3 +99,6 @@ MEV_RS_MEV_BUILDER_CONFIG_FILEPATH = (
 L2_RBUILDER_CONFIG_FILEPATH = (
     STATIC_FILES_DIRPATH + "/gwyneth/rbuilder_config.toml.tmpl"
 )
+L2_IPC_FILEPATH = (
+    STATIC_FILES_DIRPATH + "/gwyneth/reth.ipc"
+)
