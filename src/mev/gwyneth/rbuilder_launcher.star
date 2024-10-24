@@ -7,7 +7,7 @@ shared_utils = import_module("../../shared_utils/shared_utils.star")
 L1_DATA_MOUNT = "/data/reth/execution-data"
 L2_DATA_MOUNT = "/data/reth/gwyneth"
 IPC_MOUNT = "/tmp/reth.ipc"
-RBUILDER_CONFIG_FILE = "config-gwyneth-reth.toml"
+RBUILDER_CONFIG_MOUNT = "config-gwyneth-reth.toml"
 
 RBUILDER_RPC_PORT = 9646
 
@@ -51,7 +51,7 @@ def launch(
         mev_params
     )
     template_and_data = shared_utils.new_template_and_data(config_template_file, template_data)
-    config_artifact = plan.render_templates({ RBUILDER_CONFIG_FILE: template_and_data }, RBUILDER_CONFIG_FILE)
+    config_artifact = plan.render_templates({ RBUILDER_CONFIG_MOUNT: template_and_data }, RBUILDER_CONFIG_MOUNT)
 
     plan.print("Rbuilder config {0}".format(template_data))
 
@@ -62,7 +62,7 @@ def launch(
         entrypoint=["/app/rbuilder"],
         cmd=[
             "run",
-            RBUILDER_CONFIG_FILE
+            RBUILDER_CONFIG_MOUNT
         ],
     )
     service_name = "{0}-rbuilder".format(el_context.service_name)
