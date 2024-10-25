@@ -7,7 +7,7 @@ shared_utils = import_module("../../shared_utils/shared_utils.star")
 L1_DATA_MOUNT = "/data/reth/execution-data"
 L2_DATA_MOUNT = "/data/reth/gwyneth"
 IPC_MOUNT = "/tmp/reth.ipc"
-RBUILDER_CONFIG_MOUNT = "config-gwyneth-reth.toml"
+RBUILDER_CONFIG_NAME = "config-gwyneth-reth.toml"
 
 RBUILDER_RPC_PORT = 9646
 
@@ -27,6 +27,7 @@ def launch(
     global_node_selectors,
 ):
     el_rpc_uri = "http://{0}:{1}".format(el_context.ip_addr, el_context.rpc_port_num)
+
     l2_data_paths = []
     l2_ipc_paths = []
     files = {
@@ -41,7 +42,6 @@ def launch(
         # /tmp/reth.ipc-160010: data-el-1-gwyneth-lighthouse-160010
         files[l2_ipc_paths[i]] = el_context.ipc_files[i]
 
-
     config_template_file = read_file(static_files.L2_RBUILDER_CONFIG_FILEPATH)
     template_data = new_rbuilder_template_data(
         beacon_uri,
@@ -51,8 +51,13 @@ def launch(
         mev_params
     )
     template_and_data = shared_utils.new_template_and_data(config_template_file, template_data)
-    config_artifact = plan.render_templates({ RBUILDER_CONFIG_MOUNT: template_and_data }, RBUILDER_CONFIG_MOUNT)
-
+    template_and_data_filepath = {}
+    template_and_data_filepath[RBUILDER_CONFIG_NAME] = template_and_data
+    config_artifact = plan.render_templates(
+        template_and_data_filepath, "rbuilder-config-toml"
+    )
+    # /config/config-gwyneth-reth.toml: rbuilder-config-gwyneth-reth
+    files["/config"] = config_artifact
     plan.print("Rbuilder config {0}".format(template_data))
 
     service_config = ServiceConfig(
@@ -62,10 +67,10 @@ def launch(
         entrypoint=["/app/rbuilder"],
         cmd=[
             "run",
-            RBUILDER_CONFIG_MOUNT
-        ],
+            "/config/" + RBUILDER_CONFIG_NAME
+        ]
     )
-    service_name = "{0}-rbuilder".format(el_context.service_name)
+    service_name = "rbuilder-{0}".format(el_context.service_name)
     
     plan.add_service(service_name, service_config)
 

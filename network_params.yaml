@@ -9,7 +9,7 @@ participants:
     cl_type: teku
     cl_image: consensys/teku:latest
 network_params:
-  network_id: '160010'
+  network_id: '160010' # can be any number other than 1
 additional_services:
   - blockscout
   - blockscout_l2_1
