@@ -31,7 +31,7 @@ l2_el_node_ipc_paths = [
 extra_data = "⚡🤖"
 
 dry_run = false
-dry_run_validation_url = "{{ .RethRpcUrl }}"
+dry_run_validation_url = "{{ .RethRpcUri }}"
 
 # blocks_processor_url can be an API service to record bids and transactions. It is not required.
 # blocks_processor_url = "http://block_processor.internal"
@@ -50,7 +50,7 @@ url = "http://0xac6e77dfe25ecd6110b8e780608cce0dab71fdd5ebea22a16c0205200f2f8e2e
 priority = 0
 use_ssz_for_submit = false
 use_gzip_for_submit = false
-l1_rpc_url =  "{{ .RethRpcUrl }}"
+l1_rpc_url =  "{{ .RethRpcUri }}"
 l1_proposer_pk = "{{ .L1ProposerPk }}"
 l1_smart_contract_address = "{{ .L1GwynethAddress }}"
 
