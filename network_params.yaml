@@ -7,6 +7,7 @@ participants:
     cl_extra_params: [--always-prepare-payload, --prepare-payload-lookahead, "12000"]
   - el_type: reth
     el_image: taiko_reth
+    el_extra_params: ["--num_of_l2s", "2"]
     cl_type: teku
     cl_image: consensys/teku:latest
 network_params:
