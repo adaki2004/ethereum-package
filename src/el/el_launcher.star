@@ -24,19 +24,11 @@ def launch(
     network_id,
     num_participants,
     port_publisher,
+    mev_builder_type,
+    mev_params,
 ):
     el_launchers = {
         constants.EL_TYPE.geth: {
-            "launcher": geth.new_geth_launcher(
-                el_cl_data,
-                jwt_file,
-                network_params.network,
-                network_id,
-                el_cl_data.prague_time,
-            ),
-            "launch_method": geth.launch,
-        },
-        constants.EL_TYPE.geth_builder: {
             "launcher": geth.new_geth_launcher(
                 el_cl_data,
                 jwt_file,
@@ -85,7 +77,8 @@ def launch(
                 el_cl_data,
                 jwt_file,
                 network_params.network,
-                builder=True,
+                builder_type=mev_builder_type,
+                mev_params=mev_params,
             ),
             "launch_method": reth.launch,
         },
@@ -108,7 +101,7 @@ def launch(
     }
 
     all_el_contexts = []
-
+    network_name = shared_utils.get_network_name(network_params.network)
     for index, participant in enumerate(participants):
         cl_type = participant.cl_type
         el_type = participant.el_type
@@ -119,6 +112,7 @@ def launch(
         tolerations = input_parser.get_client_tolerations(
             participant.el_tolerations, participant.tolerations, global_tolerations
         )
+
         if el_type not in el_launchers:
             fail(
                 "Unsupported launcher '{0}', need one of '{1}'".format(
@@ -140,19 +134,10 @@ def launch(
             plan,
             el_launcher,
             el_service_name,
-            participant.el_image,
-            participant.el_log_level,
+            participant,
             global_log_level,
             all_el_contexts,
-            participant.el_min_cpu,
-            participant.el_max_cpu,
-            participant.el_min_mem,
-            participant.el_max_mem,
-            participant.el_extra_params,
-            participant.el_extra_env_vars,
-            participant.el_extra_labels,
             persistent,
-            participant.el_volume_size,
             tolerations,
             node_selectors,
             port_publisher,
