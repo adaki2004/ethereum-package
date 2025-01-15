@@ -67,6 +67,7 @@ def launch_blockscout(
     el_client_rpc_url = "http://{}:{}/".format(
         el_context.ip_addr, el_context.rpc_port_num
     )
+    frontend_service_name = SERVICE_NAME_FRONTEND
 
     # nth_blockscout means if we need addiitonal ones, we need to name the service differently (and obviously use different ports)
     if nth_blockscout > 0:
@@ -76,6 +77,9 @@ def launch_blockscout(
         )
         real_service_name = "{}{}{}".format(
             real_service_name, "-layer2-", nth_blockscout
+        )
+        frontend_service_name = "{}{}{}".format(
+            frontend_service_name, "-layer2-", nth_blockscout
         )
 
     postgres_output = postgres.run(
@@ -129,7 +133,7 @@ def launch_blockscout(
         global_node_selectors,
         blockscout_service,
     )
-    plan.add_service(SERVICE_NAME_FRONTEND, config_frontend)
+    plan.add_service(frontend_service_name, config_frontend)
     return blockscout_url
 
 

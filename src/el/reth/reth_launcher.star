@@ -136,7 +136,7 @@ def get_config(
     # By default it is 1 anyways, only need to supply this param in config file if bigger than 0
     num_of_l2s = 0
     cmd_from_extra_params = []
-    if len(extra_params) > 0:
+    if len(participant.el_extra_params) > 0:
         cmd_from_extra_params, num_of_l2s = parse_extra_params(participant.el_extra_params)
 
     if port_publisher.el_enabled:
