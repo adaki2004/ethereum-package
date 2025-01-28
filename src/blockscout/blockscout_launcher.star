@@ -132,6 +132,7 @@ def launch_blockscout(
         network_params,
         global_node_selectors,
         blockscout_service,
+        nth_blockscout,
     )
     plan.add_service(frontend_service_name, config_frontend)
     return blockscout_url
@@ -245,7 +246,17 @@ def get_config_frontend(
     network_params,
     node_selectors,
     blockscout_service,
+    nth_blockscout,
 ):
+
+     # Determine network name based on nth_blockscout
+    if nth_blockscout == 0:
+        network_name = "Gwyneth L1"
+    else:
+        # For L2, use L2A, L2B, etc. based on nth_blockscout
+        l2_suffix = chr(ord('A') + nth_blockscout - 1)  # Convert 1 to A, 2 to B, etc.
+        network_name = "Gwyneth L2{}".format(l2_suffix)
+    
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
@@ -255,7 +266,7 @@ def get_config_frontend(
         env_vars={
             "NEXT_PUBLIC_API_PROTOCOL": "http",
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
-            "NEXT_PUBLIC_NETWORK_NAME": "Gwyneth",
+            "NEXT_PUBLIC_NETWORK_NAME": network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
             "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
