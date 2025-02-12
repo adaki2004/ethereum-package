@@ -270,7 +270,7 @@ def get_config_frontend(
         ports=FRONTEND_USED_PORTS,
         env_vars={
             "NEXT_PUBLIC_APP_PROTOCOL": "https",
-            "NEXT_PUBLIC_APP_HOST"=hostName,
+            "NEXT_PUBLIC_APP_HOST": hostName,
             "NEXT_PUBLIC_API_PROTOCOL": "https",
             "NEXT_PUBLIC_APP_HOST": hostName,
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "wss",
