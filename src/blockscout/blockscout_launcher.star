@@ -262,6 +262,11 @@ def get_config_frontend(
         network_name = "Gwyneth L2{}".format(l2_suffix)
         hostName = "l2{}.explorer.gwyneth.xyz".format(l2_suffix_lowercase)
     
+        # Removed from the below section as it was duplicate - if it does not fixes the issue, that sucks.
+            #"NEXT_PUBLIC_API_HOST": blockscout_service.ip_address
+            #+ ":"
+            #+ str(blockscout_service.ports["http"].number),
+
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
             docker_cache_params,
@@ -278,9 +283,6 @@ def get_config_frontend(
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
             "NEXT_PUBLIC_APP_HOST": "0.0.0.0",
-            "NEXT_PUBLIC_API_HOST": blockscout_service.ip_address
-            + ":"
-            + str(blockscout_service.ports["http"].number),
             "NEXT_PUBLIC_AD_BANNER_PROVIDER": "none",
             "NEXT_PUBLIC_AD_TEXT_PROVIDER": "none",
             "NEXT_PUBLIC_IS_TESTNET": "true",
