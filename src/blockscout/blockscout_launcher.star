@@ -277,7 +277,7 @@ def get_config_frontend(
             "NEXT_PUBLIC_APP_PROTOCOL": "https",
             "NEXT_PUBLIC_APP_HOST": hostName,
             "NEXT_PUBLIC_API_PROTOCOL": "https",
-            "NEXT_PUBLIC_APP_HOST": hostName,
+            "NEXT_PUBLIC_API_HOST": hostName,
             "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "wss",
             "NEXT_PUBLIC_NETWORK_NAME": network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
