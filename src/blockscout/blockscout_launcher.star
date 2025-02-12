@@ -248,14 +248,19 @@ def get_config_frontend(
     blockscout_service,
     nth_blockscout,
 ):
+    hostName = ""
 
      # Determine network name based on nth_blockscout
     if nth_blockscout == 0:
         network_name = "Gwyneth L1"
+        hostName = "l1.explorer.gwyneth.xyz"
+
     else:
         # For L2, use L2A, L2B, etc. based on nth_blockscout
         l2_suffix = chr(ord('A') + nth_blockscout - 1)  # Convert 1 to A, 2 to B, etc.
+        l2_suffix_lowercase = chr(ord('a') + nth_blockscout - 1)
         network_name = "Gwyneth L2{}".format(l2_suffix)
+        hostName = "l2{}.explorer.gwyneth.xyz".format(l2_suffix_lowercase)
     
     return ServiceConfig(
         image=shared_utils.docker_cache_image_calc(
@@ -264,8 +269,11 @@ def get_config_frontend(
         ),
         ports=FRONTEND_USED_PORTS,
         env_vars={
-            "NEXT_PUBLIC_API_PROTOCOL": "http",
-            "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "ws",
+            "NEXT_PUBLIC_APP_PROTOCOL": "https",
+            "NEXT_PUBLIC_APP_HOST"=hostName
+            "NEXT_PUBLIC_API_PROTOCOL": "https",
+            "NEXT_PUBLIC_APP_HOST": hostName,
+            "NEXT_PUBLIC_API_WEBSOCKET_PROTOCOL": "wss",
             "NEXT_PUBLIC_NETWORK_NAME": network_name,
             "NEXT_PUBLIC_NETWORK_ID": network_params.network_id,
             "NEXT_PUBLIC_NETWORK_RPC_URL": el_client_rpc_url,
