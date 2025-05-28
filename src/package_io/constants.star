@@ -47,6 +47,7 @@ CLIENT_TYPES = struct(
 TCP_DISCOVERY_PORT_ID = "tcp-discovery"
 UDP_DISCOVERY_PORT_ID = "udp-discovery"
 RPC_PORT_ID = "rpc"
+RPC_ROUTER_PORT_ID = "rpc-router"
 # Add 10 L2 support for now
 L2_RPC_PORT_ID_1 = "l2-rpc1"
 L2_RPC_PORT_ID_2 = "l2-rpc2"
