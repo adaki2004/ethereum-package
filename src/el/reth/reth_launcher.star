@@ -9,6 +9,11 @@ mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launche
 
 RPC_PORT_NUM = 8545
 L2_START_RPC_PORT_NUM = 10110
+RPC_ROUTER_PORT_NUM = 32009
+# Note: In case we are running more than 7 L2s within kurtosis (for whatever reason)
+# there will be a conflict between L2 ports and RPC router port, but since we are just
+# using it for devnet, for backward compatibility with Brecht's script, fine as is.
+RPC_ROUTER_PUBLIC_PORT = 32009
 L2_RPC_PORT_OFFSET = 100
 WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
@@ -206,6 +211,7 @@ def get_config(
             constants.WS_PORT_ID: public_ports_for_component[3],
             constants.METRICS_PORT_ID: public_ports_for_component[4],
             constants.L2_RPC_PORT_ID_1: public_ports_for_component[5],
+            constants.RPC_ROUTER_PORT_ID: RPC_ROUTER_PUBLIC_PORT,
         }
 
         # Currently supporting 10 but 1 (10110) is "default" exposed
@@ -240,6 +246,7 @@ def get_config(
         constants.ENGINE_RPC_PORT_ID: ENGINE_RPC_PORT_NUM,
         constants.RPC_PORT_ID: RPC_PORT_NUM,
         constants.L2_RPC_PORT_ID_1: L2_START_RPC_PORT_NUM,
+        constants.RPC_ROUTER_PORT_ID: RPC_ROUTER_PORT_NUM,
         constants.WS_PORT_ID: WS_PORT_NUM,
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
