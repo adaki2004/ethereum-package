@@ -9,6 +9,7 @@ NOT_PROVIDED_WAIT = "not-provided-wait"
 MAX_PORTS_PER_CL_NODE = 5
 MAX_PORTS_PER_EL_NODE = 15  # Add because we might launch +10 L2s. So 5+10 for now.
 MAX_PORTS_PER_VC_NODE = 3
+MAX_PORTS_PER_REMOTE_SIGNER_NODE = 2
 MAX_PORTS_PER_ADDITIONAL_SERVICE = 2
 
 
@@ -70,7 +71,9 @@ def zfill_custom(value, width):
     return ("0" * (width - len(str(value)))) + str(value)
 
 
-def label_maker(client, client_type, image, connected_client, extra_labels):
+def label_maker(
+    client, client_type, image, connected_client, extra_labels, supernode=False
+):
     # Extract sha256 hash if present
     sha256 = ""
     if "@sha256:" in image:
@@ -80,12 +83,15 @@ def label_maker(client, client_type, image, connected_client, extra_labels):
     labels = {
         "ethereum-package.client": client,
         "ethereum-package.client-type": client_type,
-        "ethereum-package.client-image": image.replace("/", "-")
-        .replace(":", "_")
-        .split("@")[0],  # drop the sha256 part of the image from the label
+        "ethereum-package.client-image": ensure_alphanumeric_bounds(
+            image.replace("/", "-").replace(":", "_").replace(".", "-").split("@")[0]
+        ),  # drop the sha256 part of the image from the label
         "ethereum-package.sha256": sha256,
         "ethereum-package.connected-client": connected_client,
     }
+
+    if supernode:
+        labels["ethereum-package.supernode"] = str(supernode)
 
     # Add extra_labels to the labels dictionary
     labels.update(extra_labels)
@@ -260,6 +266,12 @@ def get_public_ports_for_component(
             MAX_PORTS_PER_VC_NODE,
             participant_index,
         )
+    elif component == "remote-signer":
+        public_port_range = __get_port_range(
+            port_publisher_params.remote_signer_public_port_start,
+            MAX_PORTS_PER_REMOTE_SIGNER_NODE,
+            participant_index,
+        )
     elif component == "additional_services":
         public_port_range = __get_port_range(
             port_publisher_params.additional_services_public_port_start,
@@ -312,6 +324,7 @@ def get_port_specs(port_assignments):
             constants.VALIDATOR_HTTP_PORT_ID,
             constants.ADMIN_PORT_ID,
             constants.VALDIATOR_GRPC_PORT_ID,
+            constants.RBUILDER_PORT_ID,
         ]:
             ports.update(
                 {port_id: new_port_spec(port, TCP_PROTOCOL, HTTP_APPLICATION_PROTOCOL)}
@@ -329,3 +342,64 @@ def get_additional_service_standard_public_port(
         )
         public_ports = get_port_specs({port_id: public_ports_for_component[port_index]})
     return public_ports
+
+
+def get_cpu_mem_resource_limits(
+    min_cpu, max_cpu, min_mem, max_mem, volume_size, network_name, client_type
+):
+    min_cpu = int(min_cpu) if int(min_cpu) > 0 else 0
+    max_cpu = int(max_cpu) if int(max_cpu) > 0 else 0
+    min_mem = int(min_mem) if int(min_mem) > 0 else 0
+    max_mem = int(max_mem) if int(max_mem) > 0 else 0
+    volume_size = (
+        int(volume_size)
+        if int(volume_size) > 0
+        else constants.VOLUME_SIZE[network_name][client_type + "_volume_size"]
+    )
+    return min_cpu, max_cpu, min_mem, max_mem, volume_size
+
+
+def docker_cache_image_calc(docker_cache_params, image):
+    if docker_cache_params.enabled:
+        if docker_cache_params.url in image:
+            return image
+        if constants.CONTAINER_REGISTRY.ghcr in image:
+            return (
+                docker_cache_params.url
+                + docker_cache_params.github_prefix
+                + "/".join(image.split("/")[1:])
+            )
+        elif constants.CONTAINER_REGISTRY.gcr in image:
+            return (
+                docker_cache_params.url
+                + docker_cache_params.gcr_prefix
+                + "/".join(image.split("/")[1:])
+            )
+        elif constants.CONTAINER_REGISTRY.dockerhub in image:
+            return (
+                docker_cache_params.url + docker_cache_params.dockerhub_prefix + image
+            )
+
+    return image
+
+
+def is_alphanumeric(c):
+    return ("a" <= c and c <= "z") or ("A" <= c and c <= "Z") or ("0" <= c and c <= "9")
+
+
+def ensure_alphanumeric_bounds(s):
+    # Trim from the start
+    start = 0
+    for i in range(len(s)):
+        if is_alphanumeric(s[i]):
+            start = i
+            break
+
+    # Trim from the end
+    end = len(s)
+    for i in range(len(s) - 1, -1, -1):
+        if is_alphanumeric(s[i]):
+            end = i + 1
+            break
+
+    return s[start:end]

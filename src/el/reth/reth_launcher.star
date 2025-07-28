@@ -6,6 +6,10 @@ el_shared = import_module("../el_shared.star")
 node_metrics = import_module("../../node_metrics_info.star")
 constants = import_module("../../package_io/constants.star")
 mev_rs_builder = import_module("../../mev/mev-rs/mev_builder/mev_builder_launcher.star")
+lighthouse = import_module("../../cl/lighthouse/lighthouse_launcher.star")
+flashbots_rbuilder = import_module(
+    "../../mev/flashbots/mev_builder/mev_builder_launcher.star"
+)
 
 RPC_PORT_NUM = 8545
 L2_START_RPC_PORT_NUM = 10110
@@ -19,18 +23,13 @@ WS_PORT_NUM = 8546
 DISCOVERY_PORT_NUM = 30303
 ENGINE_RPC_PORT_NUM = 8551
 METRICS_PORT_NUM = 9001
-
-# The min/max CPU/memory that the execution node can use
-EXECUTION_MIN_CPU = 100
-EXECUTION_MIN_MEMORY = 256
-
+RBUILDER_PORT_NUM = 8645
 # Paths
 METRICS_PATH = "/metrics"
 
 # The dirpath of the execution data directory on the client container
 EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER = "/data/reth/execution-data"
 
-ENTRYPOINT_ARGS = ["sh", "-c"]
 
 VERBOSITY_LEVELS = {
     constants.GLOBAL_LOG_LEVEL.error: "v",
@@ -45,74 +44,32 @@ def launch(
     plan,
     launcher,
     service_name,
-    image,
-    participant_log_level,
+    participant,
     global_log_level,
-    # If empty then the node will be launched as a bootnode
     existing_el_clients,
-    el_min_cpu,
-    el_max_cpu,
-    el_min_mem,
-    el_max_mem,
-    extra_params,
-    extra_env_vars,
-    extra_labels,
     persistent,
-    el_volume_size,
     tolerations,
     node_selectors,
     port_publisher,
     participant_index,
 ):
     log_level = input_parser.get_client_log_level_or_default(
-        participant_log_level, global_log_level, VERBOSITY_LEVELS
-    )
-
-    network_name = shared_utils.get_network_name(launcher.network)
-
-    el_min_cpu = int(el_min_cpu) if int(el_min_cpu) > 0 else EXECUTION_MIN_CPU
-    el_max_cpu = (
-        int(el_max_cpu)
-        if int(el_max_cpu) > 0
-        else constants.RAM_CPU_OVERRIDES[network_name]["reth_max_cpu"]
-    )
-    el_min_mem = int(el_min_mem) if int(el_min_mem) > 0 else EXECUTION_MIN_MEMORY
-    el_max_mem = (
-        int(el_max_mem)
-        if int(el_max_mem) > 0
-        else constants.RAM_CPU_OVERRIDES[network_name]["reth_max_mem"]
-    )
-
-    el_volume_size = (
-        el_volume_size
-        if int(el_volume_size) > 0
-        else constants.VOLUME_SIZE[network_name]["reth_volume_size"]
+        participant.el_log_level, global_log_level, VERBOSITY_LEVELS
     )
 
     cl_client_name = service_name.split("-")[3]
 
     config = get_config(
         plan,
-        launcher.el_cl_genesis_data,
-        launcher.jwt_file,
-        launcher.network,
-        image,
+        launcher,
+        participant,
         service_name,
         existing_el_clients,
         cl_client_name,
         log_level,
-        el_min_cpu,
-        el_max_cpu,
-        el_min_mem,
-        el_max_mem,
-        extra_params,
-        extra_env_vars,
-        extra_labels,
         persistent,
-        el_volume_size,
         tolerations,
         node_selectors,
-        launcher.builder,
         port_publisher,
         participant_index,
     )
@@ -132,17 +89,16 @@ def launch(
     ws_url = "ws://{0}:{1}".format(service.ip_address, WS_PORT_NUM)
 
     return el_context.new_el_context(
-        "reth",
-        "",  # reth has no enr
-        enode,
-        service.ip_address,
-        RPC_PORT_NUM,
-        WS_PORT_NUM,
-        ENGINE_RPC_PORT_NUM,
-        http_url,
-        ws_url,
-        service_name,
-        [reth_metrics_info],
+        client_name="reth",
+        enode=enode,
+        ip_addr=service.ip_address,
+        rpc_port_num=RPC_PORT_NUM,
+        ws_port_num=WS_PORT_NUM,
+        engine_rpc_port_num=ENGINE_RPC_PORT_NUM,
+        rpc_http_url=http_url,
+        ws_url=ws_url,
+        service_name=service_name,
+        el_metrics_info=[reth_metrics_info],
     )
 
 def parse_extra_params(extra_params):
@@ -167,26 +123,15 @@ def parse_extra_params(extra_params):
 
 def get_config(
     plan,
-    el_cl_genesis_data,
-    jwt_file,
-    network,
-    image,
+    launcher,
+    participant,
     service_name,
     existing_el_clients,
     cl_client_name,
-    verbosity_level,
-    el_min_cpu,
-    el_max_cpu,
-    el_min_mem,
-    el_max_mem,
-    extra_params,
-    extra_env_vars,
-    extra_labels,
+    log_level,
     persistent,
-    el_volume_size,
     tolerations,
     node_selectors,
-    builder,
     port_publisher,
     participant_index,
 ):
@@ -196,8 +141,8 @@ def get_config(
     # By default it is 1 anyways, only need to supply this param in config file if bigger than 0
     num_of_l2s = 0
     cmd_from_extra_params = []
-    if len(extra_params) > 0:
-        cmd_from_extra_params, num_of_l2s = parse_extra_params(extra_params)
+    if len(participant.el_extra_params) > 0:
+        cmd_from_extra_params, num_of_l2s = parse_extra_params(participant.el_extra_params)
 
     if port_publisher.el_enabled:
         public_ports_for_component = shared_utils.get_public_ports_for_component(
@@ -251,6 +196,13 @@ def get_config(
         constants.METRICS_PORT_ID: METRICS_PORT_NUM,
     }
 
+    if (
+        launcher.builder_type == constants.FLASHBOTS_MEV_TYPE
+        or launcher.builder_type == constants.COMMIT_BOOST_MEV_TYPE
+    ):
+        used_port_assignments[constants.RBUILDER_PORT_ID] = RBUILDER_PORT_NUM
+
+
     if num_of_l2s > 1:
             for i in range(1, num_of_l2s):
                 l2_port_inside_container = L2_START_RPC_PORT_NUM + (i*L2_RPC_PORT_OFFSET)
@@ -275,38 +227,47 @@ def get_config(
 
     used_ports = shared_utils.get_port_specs(used_port_assignments)
 
-    cmd = [
-        "/usr/local/bin/mev build" if builder else "reth",
-        "node",
-        "-{0}".format(verbosity_level),
-        "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
-        "--chain={0}".format(
-            network
-            if network in constants.PUBLIC_NETWORKS
-            else constants.GENESIS_CONFIG_MOUNT_PATH_ON_CONTAINER + "/genesis.json"
-        ),
-        "--http",
-        "--http.port={0}".format(RPC_PORT_NUM),
-        "--http.addr=0.0.0.0",
-        "--http.corsdomain=*",
-        # WARNING: The admin info endpoint is enabled so that we can easily get ENR/enode, which means
-        #  that users should NOT store private information in these Kurtosis nodes!
-        "--http.api=admin,net,eth,web3,debug,trace",
-        "--ws",
-        "--ws.addr=0.0.0.0",
-        "--ws.port={0}".format(WS_PORT_NUM),
-        "--ws.api=net,eth",
-        "--ws.origins=*",
-        "--nat=extip:" + port_publisher.nat_exit_ip,
-        "--authrpc.port={0}".format(ENGINE_RPC_PORT_NUM),
-        "--authrpc.jwtsecret=" + constants.JWT_MOUNT_PATH_ON_CONTAINER,
-        "--authrpc.addr=0.0.0.0",
-        "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
-        "--discovery.port={0}".format(discovery_port),
-        "--port={0}".format(discovery_port),
-    ]
+    cmd = []
 
-    if network == constants.NETWORK_NAME.kurtosis:
+    if launcher.builder_type == "mev-rs":
+        cmd.append("build")
+
+    cmd.extend(
+        [
+            "node",
+            "-{0}".format(log_level),
+            "--datadir=" + EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER,
+            "--chain={0}".format(
+                launcher.network
+                if launcher.network in constants.PUBLIC_NETWORKS
+                else constants.GENESIS_CONFIG_MOUNT_PATH_ON_CONTAINER + "/genesis.json"
+            ),
+            "--http",
+            "--http.port={0}".format(RPC_PORT_NUM),
+            "--http.addr=0.0.0.0",
+            "--http.corsdomain=*",
+            "--http.api=admin,net,eth,web3,debug,txpool,trace{0}".format(
+                ",flashbots"
+                if launcher.builder_type == constants.FLASHBOTS_MEV_TYPE
+                or launcher.builder_type == constants.COMMIT_BOOST_MEV_TYPE
+                else ""
+            ),
+            "--ws",
+            "--ws.addr=0.0.0.0",
+            "--ws.port={0}".format(WS_PORT_NUM),
+            "--ws.api=net,eth",
+            "--ws.origins=*",
+            "--nat=extip:" + port_publisher.nat_exit_ip,
+            "--authrpc.port={0}".format(ENGINE_RPC_PORT_NUM),
+            "--authrpc.jwtsecret=" + constants.JWT_MOUNT_PATH_ON_CONTAINER,
+            "--authrpc.addr=0.0.0.0",
+            "--metrics=0.0.0.0:{0}".format(METRICS_PORT_NUM),
+            "--discovery.port={0}".format(discovery_port),
+            "--port={0}".format(discovery_port),
+        ]
+    )
+
+    if launcher.network == constants.NETWORK_NAME.kurtosis:
         if len(existing_el_clients) > 0:
             cmd.append(
                 "--bootnodes="
@@ -318,13 +279,13 @@ def get_config(
                 )
             )
     elif (
-        network not in constants.PUBLIC_NETWORKS
-        and constants.NETWORK_NAME.shadowfork not in network
+        launcher.network not in constants.PUBLIC_NETWORKS
+        and constants.NETWORK_NAME.shadowfork not in launcher.network
     ):
         cmd.append(
             "--bootnodes="
             + shared_utils.get_devnet_enodes(
-                plan, el_cl_genesis_data.files_artifact_uuid
+                plan, launcher.el_cl_genesis_data.files_artifact_uuid
             )
         )
 
@@ -334,50 +295,85 @@ def get_config(
     cmd_str = " ".join(cmd)
 
     files = {
-        constants.GENESIS_DATA_MOUNTPOINT_ON_CLIENTS: el_cl_genesis_data.files_artifact_uuid,
-        constants.JWT_MOUNTPOINT_ON_CLIENTS: jwt_file,
+        constants.GENESIS_DATA_MOUNTPOINT_ON_CLIENTS: launcher.el_cl_genesis_data.files_artifact_uuid,
+        constants.JWT_MOUNTPOINT_ON_CLIENTS: launcher.jwt_file,
     }
 
     if persistent:
         files[EXECUTION_DATA_DIRPATH_ON_CLIENT_CONTAINER] = Directory(
             persistent_key="data-{0}".format(service_name),
-            size=el_volume_size,
+            size=int(participant.el_volume_size)
+            if int(participant.el_volume_size) > 0
+            else constants.VOLUME_SIZE[launcher.network][
+                constants.EL_TYPE.reth + "_volume_size"
+            ],
         )
-
-    if builder:
+    env_vars = {}
+    image = participant.el_image
+    if launcher.builder_type == constants.MEV_RS_MEV_TYPE:
         files[
             mev_rs_builder.MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE
         ] = mev_rs_builder.MEV_BUILDER_FILES_ARTIFACT_NAME
+    elif (
+        launcher.builder_type == constants.FLASHBOTS_MEV_TYPE
+        or launcher.builder_type == constants.COMMIT_BOOST_MEV_TYPE
+    ):
+        image = launcher.mev_params.mev_builder_image
+        cl_client_name = service_name.split("-")[4]
+        cmd.append("--engine.experimental")
+        cmd.append("--rbuilder.config=" + flashbots_rbuilder.MEV_FILE_PATH_ON_CONTAINER)
+        files[
+            flashbots_rbuilder.MEV_BUILDER_MOUNT_DIRPATH_ON_SERVICE
+        ] = flashbots_rbuilder.MEV_BUILDER_FILES_ARTIFACT_NAME
+        env_vars.update(
+            {
+                "CL_ENDPOINT": "http://cl-{0}-{1}-{2}:{3}".format(
+                    participant_index + 1,
+                    cl_client_name,
+                    constants.EL_TYPE.reth_builder,
+                    lighthouse.BEACON_HTTP_PORT_NUM,
+                ),
+            }
+        )
 
-    return ServiceConfig(
-        image=image,
-        ports=used_ports,
-        public_ports=public_ports,
-        cmd=[cmd_str],
-        files=files,
-        entrypoint=ENTRYPOINT_ARGS,
-        private_ip_address_placeholder=constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
-        min_cpu=el_min_cpu,
-        max_cpu=el_max_cpu,
-        min_memory=el_min_mem,
-        max_memory=el_max_mem,
-        env_vars=extra_env_vars,
-        labels=shared_utils.label_maker(
-            constants.EL_TYPE.reth,
-            constants.CLIENT_TYPES.el,
-            image,
-            cl_client_name,
-            extra_labels,
+    config_args = {
+        "image": image,
+        "ports": used_ports,
+        "public_ports": public_ports,
+        "cmd": cmd,
+        "files": files,
+        "private_ip_address_placeholder": constants.PRIVATE_IP_ADDRESS_PLACEHOLDER,
+        "env_vars": env_vars | participant.el_extra_env_vars,
+        "labels": shared_utils.label_maker(
+            client=constants.EL_TYPE.reth,
+            client_type=constants.CLIENT_TYPES.el,
+            image=participant.el_image[-constants.MAX_LABEL_LENGTH :],
+            connected_client=cl_client_name,
+            extra_labels=participant.el_extra_labels,
+            supernode=participant.supernode,
         ),
-        tolerations=tolerations,
-        node_selectors=node_selectors,
-    )
+        "tolerations": tolerations,
+        "node_selectors": node_selectors,
+    }
+
+    if participant.el_min_cpu > 0:
+        config_args["min_cpu"] = participant.el_min_cpu
+    if participant.el_max_cpu > 0:
+        config_args["max_cpu"] = participant.el_max_cpu
+    if participant.el_min_mem > 0:
+        config_args["min_memory"] = participant.el_min_mem
+    if participant.el_max_mem > 0:
+        config_args["max_memory"] = participant.el_max_mem
+    return ServiceConfig(**config_args)
 
 
-def new_reth_launcher(el_cl_genesis_data, jwt_file, network, builder=False):
+def new_reth_launcher(
+    el_cl_genesis_data, jwt_file, network, builder_type=False, mev_params=None
+):
     return struct(
         el_cl_genesis_data=el_cl_genesis_data,
         jwt_file=jwt_file,
         network=network,
-        builder=builder,
+        builder_type=builder_type,
+        mev_params=mev_params,
     )
